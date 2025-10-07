@@ -32,5 +32,31 @@
   </main>
 
   <footer>© 2025 MiracleMorning</footer>
+  <footer>© 2025 MiracleMorning</footer>
+
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+  <script>
+    Pi.init({ version: "2.0" });
+
+    async function testPayment() {
+      try {
+        const payment = await Pi.createPayment({
+          amount: 0.01,
+          memo: "MiracleMorning Test Payment",
+          metadata: { app: "MiracleMorning" }
+        });
+        alert("✅ Payment created successfully!");
+      } catch (err) {
+        alert("❌ Payment failed: " + err);
+      }
+    }
+  </script>
+
+  <div style="text-align:center; margin-top:20px;">
+    <button onclick="testPayment()" 
+      style="padding:10px 20px; font-size:16px; background:#6a5acd; color:#fff; border:none; border-radius:6px;">
+      Test Pi Payment
+    </button>
+  </div>
 </body>
 </html>
