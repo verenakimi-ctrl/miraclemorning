@@ -53,7 +53,19 @@
     }
   }
   ensureAuth();
+// Pi SDK 초기화 및 결제 스코프 인증
+Pi.init({ version: "2.0", sandbox: false });
 
+async function ensureAuth() {
+  try {
+    await Pi.authenticate(["payments"], function onIncompletePaymentFound(p) {
+      console.log("incomplete payment:", p);
+    });
+    console.log("✅ authenticated with payments scope");
+  } catch (e) {
+    alert("Auth failed: " + (e?.message || e));
+  }
+}
   // 결제 테스트 버튼에서 호출할 함수
   async function testPayment() {
     try {
