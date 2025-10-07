@@ -37,20 +37,59 @@
   <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
     Pi.init({ version: "2.0" });
+<!-- (head 안에 이미 없다면) SDK 스크립트 -->
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
 
-    async function testPayment() {
-      try {
-        const payment = await Pi.createPayment({
-          amount: 0.01,
-          memo: "MiracleMorning Test Payment",
-          metadata: { app: "MiracleMorning" }
-        });
-        alert("✅ Payment created successfully!");
-      } catch (err) {
-        alert("❌ Payment failed: " + err);
-      }
+<script>
+  // Pi SDK 초기화 (Pi 브라우저에서 실행할 때 sandbox:false)
+  Pi.init({ version: "2.0", sandbox: false });
+
+  // 페이지 로드 때 결제 스코프 인증
+  async function ensureAuth() {
+    try {
+      await Pi.authenticate(["payments"], function onIncompletePaymentFound(p) {
+        console.log("incomplete payment:", p);
+      });
+      console.log("✅ authenticated with payments scope");
+    } catch (e) {
+      alert("Auth failed: " + (e?.message || e));
     }
-  </script>
+  }
+  ensureAuth();
+
+  // 결제 테스트 버튼에서 호출할 함수
+  async function testPayment() {
+    try {
+      const paymentData = {
+        amount: 0.01, // 테스트 금액
+        memo: "MiracleMorning test payment",
+        metadata: { source: "demo" },
+      };
+
+      const callbacks = {
+        onReadyForServerApproval: (paymentId) =>
+          fetch("/api/approve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId }),
+          }),
+        onReadyForServerCompletion: (paymentId, txid) =>
+          fetch("/api/complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paymentId, txid }),
+          }),
+        onCancel: () => alert("Payment cancelled"),
+        onError: (err) => alert("❌ " + (err?.message || err)),
+      };
+
+      const payment = await Pi.createPayment(paymentData, callbacks);
+      alert("✅ Payment created: " + (payment?.identifier || ""));
+    } catch (err) {
+      alert("❌ Payment failed: " + (err?.message || err));
+    }
+  }
+</script>
 
   <div style="text-align:center; margin-top:20px;">
     <button onclick="testPayment()" 
