@@ -39,16 +39,21 @@
     // Pi SDK 초기화 (테스트용 sandbox 모드)
     Pi.init({ version: "2.0", sandbox: true });
 
-    // 인증 함수
+    // 인증 함수 (페이지 로드 시 실행)
     async function ensureAuth() {
       try {
-        await Pi.authenticate(["payments"], (p) => console.log("incomplete payment:", p));
-        console.log("✅ Authenticated with payments scope");
+        const auth = await Pi.authenticate(["payments"], (p) => console.log("incomplete payment:", p));
+        if (auth.user) {
+          console.log("✅ Authenticated with payments scope");
+        } else {
+          throw new Error("Authentication failed: no user data");
+        }
       } catch (e) {
         console.error("Auth failed:", e?.message || e);
-        alert("Authentication failed. Check console for details.");
+        alert("Authentication failed. Ensure 'payments' scope is enabled in Pi Developer Portal.");
       }
     }
+    window.onload = ensureAuth;
 
     // 결제 테스트 함수
     async function testPayment() {
@@ -60,14 +65,25 @@
         };
 
         const callbacks = {
-          onReadyForServerApproval: (paymentId) => {
+          onReadyForServerApproval: async (paymentId) => {
             console.log("Server approval needed for:", paymentId);
-            // 실제 서버 API 호출 (미구현 시 주석 처리)
-            // fetch("/api/approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paymentId }) });
+            const response = await fetch("/api/approve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId }),
+            });
+            if (!response.ok) throw new Error("Server approval failed");
+            const result = await response.json();
+            console.log("Approval response:", result);
           },
-          onReadyForServerCompletion: (paymentId, txid) => {
-            console.log("Payment completed:", paymentId, txid);
-            // fetch("/api/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paymentId, txid }) });
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            const response = await fetch("/api/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentId, txid }),
+            });
+            if (!response.ok) throw new Error("Server completion failed");
+            console.log("Completion response:", await response.json());
           },
           onCancel: () => alert("Payment cancelled"),
           onError: (err) => alert("❌ Payment failed: " + (err?.message || err)),
@@ -79,9 +95,6 @@
         alert("❌ Payment failed: " + (err?.message || err));
       }
     }
-
-    // 페이지 로드 시 인증 시도 (선택 사항)
-    window.onload = ensureAuth;
 
     // 버튼 추가
     document.body.insertAdjacentHTML('beforeend', `
