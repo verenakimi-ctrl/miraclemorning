@@ -33,27 +33,24 @@
 
   <footer>© 2025 MiracleMorning</footer>
 
+  <!-- Pi SDK 포함 -->
+  <script src="https://sdk.minepi.com/pi-sdk.js"></script>
   <script>
+    // Pi SDK 초기화 (테스트용 sandbox 모드)
+    Pi.init({ version: "2.0", sandbox: true });
 
-<script src="https://sdk.minepi.com/pi-sdk.js"></script>
-
-<script>
-  // Pi SDK 초기화 (Pi 브라우저에서 실행할 때 sandbox:false)
-  Pi.init({ version: "2.0", sandbox: false });
-
-  // 페이지 로드 때 결제 스코프 인증
-  async function ensureAuth() {
-    try {
-      await Pi.authenticate(["payments"], function onIncompletePaymentFound(p) {
-        console.log("incomplete payment:", p);
-      });
-      console.log("✅ authenticated with payments scope");
-    } catch (e) {
-      alert("Auth failed: " + (e?.message || e));
+    // 인증 함수
+    async function ensureAuth() {
+      try {
+        await Pi.authenticate(["payments"], (p) => console.log("incomplete payment:", p));
+        console.log("✅ Authenticated with payments scope");
+      } catch (e) {
+        console.error("Auth failed:", e?.message || e);
+        alert("Authentication failed. Check console for details.");
+      }
     }
-  }
-  ensureAuth();
 
+    // 결제 테스트 함수
     async function testPayment() {
       try {
         const paymentData = {
@@ -63,20 +60,17 @@
         };
 
         const callbacks = {
-          onReadyForServerApproval: (paymentId) =>
-            fetch("/api/approve", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId }),
-            }),
-          onReadyForServerCompletion: (paymentId, txid) =>
-            fetch("/api/complete", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId, txid }),
-            }),
+          onReadyForServerApproval: (paymentId) => {
+            console.log("Server approval needed for:", paymentId);
+            // 실제 서버 API 호출 (미구현 시 주석 처리)
+            // fetch("/api/approve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paymentId }) });
+          },
+          onReadyForServerCompletion: (paymentId, txid) => {
+            console.log("Payment completed:", paymentId, txid);
+            // fetch("/api/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paymentId, txid }) });
+          },
           onCancel: () => alert("Payment cancelled"),
-          onError: (err) => alert("❌ " + (err?.message || err)),
+          onError: (err) => alert("❌ Payment failed: " + (err?.message || err)),
         };
 
         const payment = await Pi.createPayment(paymentData, callbacks);
@@ -86,16 +80,17 @@
       }
     }
 
-    // 버튼은 기존처럼 onclick="testPayment()" 유지
-  }
-</script>
-</script>
+    // 페이지 로드 시 인증 시도 (선택 사항)
+    window.onload = ensureAuth;
 
-  <div style="text-align:center; margin-top:20px;">
-    <button onclick="testPayment()" 
-      style="padding:10px 20px; font-size:16px; background:#6a5acd; color:#fff; border:none; border-radius:6px;">
-      Test Pi Payment
-    </button>
-  </div>
+    // 버튼 추가
+    document.body.insertAdjacentHTML('beforeend', `
+      <div style="text-align:center; margin-top:20px;">
+        <button onclick="testPayment()" style="padding:10px 20px; font-size:16px; background:#6a5acd; color:#fff; border:none; border-radius:6px;">
+          Test Pi Payment
+        </button>
+      </div>
+    `);
+  </script>
 </body>
 </html>
